@@ -22,7 +22,7 @@ android {
         namespace "com.zolad.videoslimmer.sample"
         applicationId "com.zolad.videoslimmer.sample"
         minSdkVersion 21
-        targetSdk 33
+        targetSdk 27
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"

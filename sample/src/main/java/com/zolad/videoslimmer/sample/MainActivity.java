@@ -35,7 +35,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_FOR_VIDEO_FILE = 1000;
     private TextView tv_input, tv_output, tv_indicator, tv_progress;
-    private String outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES).getAbsolutePath();
+    private String outputDir  ;
 
     private String inputPath;
     private String outputPath;
@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
+        outputDir = this.getCacheDir().getAbsolutePath();
         List<String> permissionReqlist = new ArrayList<String>();
 
         if (!PermissionUtil.isGranted(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -122,7 +122,8 @@ public class MainActivity extends AppCompatActivity {
                             + "fileSize:" + Formatter.formatFileSize(MainActivity.this,fileSize) +"\n" +"duration(ms):"+duration;
                     tv_input.setText(before);
 
-                    @SuppressLint("SimpleDateFormat") final String destPath = outputDir + File.separator + "VIDEOSIMMER_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".mp4";
+                    @SuppressLint("SimpleDateFormat")
+                    final String destPath = outputDir + File.separator + "VIDEOSIMMER_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".mp4";
                     VideoSlimmer.convertVideo(inputPath, destPath, 200, 360, 200 * 360 * 30, new VideoSlimmer.ProgressListener() {
                         @Override
                         public void onStart() {
