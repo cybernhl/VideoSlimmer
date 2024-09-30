@@ -1,1 +1,2 @@
-include ':sample', ':videoslimmer'
+include ':videoslimmer'
+include ':sample'

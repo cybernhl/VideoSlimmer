@@ -1,11 +1,28 @@
+plugins {
+    id 'kotlin-android'
+}
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    compileSdk 35
+    buildFeatures {
+        viewBinding true
+    }
+    lintOptions {
+        warningsAsErrors true
+        abortOnError false
+        disable 'MissingTranslation',
+                'ExtraTranslation',
+                'TypographyEllipsis',
+                'UnspecifiedImmutableFlag',
+                'UnusedResources',
+                'TypographyDashes'
+    }
     defaultConfig {
+        namespace "com.zolad.videoslimmer.sample"
         applicationId "com.zolad.videoslimmer.sample"
-        minSdkVersion 18
-        targetSdkVersion 28
+        minSdkVersion 21
+        targetSdk 33
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -16,14 +33,25 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support:appcompat-v7:28.0.0-rc01'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
-    testImplementation 'junit:junit:4.12'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutine_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutine_version"
+    implementation project(':videoslimmer')
+    implementation libs.androidx.appcompat
+
+    testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-    implementation project(':videoslimmer')
 }

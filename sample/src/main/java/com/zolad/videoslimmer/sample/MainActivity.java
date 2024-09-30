@@ -1,21 +1,23 @@
 package com.zolad.videoslimmer.sample;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.os.Environment;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.format.Formatter;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.zolad.videoslimmer.VideoSlimmer;
 
@@ -120,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
                             + "fileSize:" + Formatter.formatFileSize(MainActivity.this,fileSize) +"\n" +"duration(ms):"+duration;
                     tv_input.setText(before);
 
-                    final String destPath = outputDir + File.separator + "VIDEOSIMMER_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".mp4";
+                    @SuppressLint("SimpleDateFormat") final String destPath = outputDir + File.separator + "VIDEOSIMMER_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".mp4";
                     VideoSlimmer.convertVideo(inputPath, destPath, 200, 360, 200 * 360 * 30, new VideoSlimmer.ProgressListener() {
                         @Override
                         public void onStart() {
