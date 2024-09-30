@@ -1,5 +1,7 @@
 package com.zolad.videoslimmer;
 
+import static com.zolad.videoslimmer.util.UtilsKt.MEDIATYPE_NOT_AUDIO_VIDEO;
+
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
@@ -13,6 +15,7 @@ import android.view.Surface;
 
 import com.zolad.videoslimmer.listner.SlimProgressListener;
 import com.zolad.videoslimmer.muxer.CodecInputSurface;
+import com.zolad.videoslimmer.util.UtilsKt;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,7 +45,6 @@ public class VideoSlimEncoder {
     private int mBitRate = -1;
     private static int FRAME_RATE = 25;               // 15fps
     private static int IFRAME_INTERVAL = 10;          // 10 seconds between I-frames
-    private static final int MEDIATYPE_NOT_AUDIO_VIDEO = -233;
     private final int TIMEOUT_USEC = 2500;
 
     public  VideoSlimEncoder () {
@@ -59,12 +61,12 @@ public class VideoSlimEncoder {
         this.path = sourcePath;
         this.outputPath = destinationPath;
 
-        if (checkParmsError(sourcePath, destinationPath, nwidth, nheight, nbitrate)) {
+        if (UtilsKt.checkParmsError(sourcePath, destinationPath, nwidth, nheight, nbitrate)) {
             return false;
         }
 
         //get origin video info
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        final MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         retriever.setDataSource(path);
         String width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
         String height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
@@ -121,7 +123,7 @@ public class VideoSlimEncoder {
             int muxerAudioTrackIndex = 0;
 
 
-            int audioIndex = selectTrack(mAudioExtractor, true);
+            int audioIndex = UtilsKt.selectTrack(mAudioExtractor, true);
             if (audioIndex >= 0) {
                 mAudioExtractor.selectTrack(audioIndex);
                 mAudioExtractor.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
@@ -136,7 +138,7 @@ public class VideoSlimEncoder {
              * */
             if (nwidth != originalWidth || nheight != originalHeight) {
 
-                int videoIndex = selectTrack(extractor, false);
+                int videoIndex = UtilsKt.selectTrack(extractor, false);
 
                 if (videoIndex >= 0) {
 
@@ -351,7 +353,7 @@ public class VideoSlimEncoder {
 
             } else {
                 Log.e(TAG,"startvideorecord");
-                long videoTime = simpleReadAndWriteTrack(extractor, mMuxer, mBufferInfo, startTime, endTime, cacheFile, false);
+                long videoTime = UtilsKt.simpleReadAndWriteTrack(extractor, mMuxer, mBufferInfo, startTime, endTime, cacheFile, false);
                 if (videoTime != -1) {
                     videoStartTime = videoTime;
                 }
@@ -361,8 +363,8 @@ public class VideoSlimEncoder {
 //                Log.e(TAG,"startaudiorecord");
 //                simpleReadAndWriteTrack(extractor, mMuxer, mBufferInfo, videoStartTime, endTime, cacheFile, true);
 //            }
-            
-            writeAudioTrack(mAudioExtractor, mMuxer, mBufferInfo, videoStartTime, endTime, cacheFile, muxerAudioTrackIndex);
+
+            UtilsKt.writeAudioTrack(mAudioExtractor, mMuxer, mBufferInfo, videoStartTime, endTime, cacheFile, muxerAudioTrackIndex);
 
         } catch (Exception e) {
             error = true;
@@ -395,152 +397,6 @@ public class VideoSlimEncoder {
         else
             return true;
     }
-
-
-    private boolean checkParmsError(String sourcePath, String destinationPath, int nwidth, int nheight, int nbitrate) {
-
-
-        if (nwidth <= 0 || nheight <= 0 || nbitrate <= 0)
-            return true;
-        else
-            return false;
-
-    }
-
-
-    private long simpleReadAndWriteTrack(MediaExtractor extractor, MediaMuxer mediaMuxer, MediaCodec.BufferInfo info, long start, long end, File file, boolean isAudio) throws Exception {
-        int trackIndex = selectTrack(extractor, isAudio);
-        if (trackIndex >= 0) {
-            extractor.selectTrack(trackIndex);
-            MediaFormat trackFormat = extractor.getTrackFormat(trackIndex);
-            int muxerTrackIndex = mediaMuxer.addTrack(trackFormat);
-
-            if(!isAudio)
-             mediaMuxer.start();
-
-            int maxBufferSize = trackFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE);
-            boolean inputDone = false;
-            if (start > 0) {
-                extractor.seekTo(start, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            } else {
-                extractor.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            }
-            ByteBuffer buffer = ByteBuffer.allocateDirect(maxBufferSize);
-            long startTime = -1;
-
-            while (!inputDone) {
-
-                boolean eof = false;
-                int index = extractor.getSampleTrackIndex();
-                if (index == trackIndex) {
-                    info.size = extractor.readSampleData(buffer, 0);
-
-                    if (info.size < 0) {
-                        info.size = 0;
-                        eof = true;
-                    } else {
-                        info.presentationTimeUs = extractor.getSampleTime();
-                        if (start > 0 && startTime == -1) {
-                            startTime = info.presentationTimeUs;
-                        }
-                        if (end < 0 || info.presentationTimeUs < end) {
-                            info.offset = 0;
-                            info.flags = extractor.getSampleFlags();
-                            mediaMuxer.writeSampleData(muxerTrackIndex, buffer, info);
-                            extractor.advance();
-                        } else {
-                            eof = true;
-                        }
-                    }
-                } else if (index == -1) {
-                    eof = true;
-                }
-                if (eof) {
-                    inputDone = true;
-                }
-            }
-
-            extractor.unselectTrack(trackIndex);
-            return startTime;
-        }
-        return -1;
-    }
-
-
-    private long writeAudioTrack(MediaExtractor extractor, MediaMuxer mediaMuxer, MediaCodec.BufferInfo info, long start, long end, File file,int muxerTrackIndex ) throws Exception {
-        int trackIndex = selectTrack(extractor, true);
-        if (trackIndex >= 0) {
-            extractor.selectTrack(trackIndex);
-            MediaFormat trackFormat = extractor.getTrackFormat(trackIndex);
-          
-
-            int maxBufferSize = trackFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE);
-            boolean inputDone = false;
-            if (start > 0) {
-                extractor.seekTo(start, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            } else {
-                extractor.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            }
-            ByteBuffer buffer = ByteBuffer.allocateDirect(maxBufferSize);
-            long startTime = -1;
-
-            while (!inputDone) {
-
-                boolean eof = false;
-                int index = extractor.getSampleTrackIndex();
-                if (index == trackIndex) {
-                    info.size = extractor.readSampleData(buffer, 0);
-
-                    if (info.size < 0) {
-                        info.size = 0;
-                        eof = true;
-                    } else {
-                        info.presentationTimeUs = extractor.getSampleTime();
-                        if (start > 0 && startTime == -1) {
-                            startTime = info.presentationTimeUs;
-                        }
-                        if (end < 0 || info.presentationTimeUs < end) {
-                            info.offset = 0;
-                            info.flags = extractor.getSampleFlags();
-                            mediaMuxer.writeSampleData(muxerTrackIndex, buffer, info);
-                            extractor.advance();
-                        } else {
-                            eof = true;
-                        }
-                    }
-                } else if (index == -1) {
-                    eof = true;
-                }
-                if (eof) {
-                    inputDone = true;
-                }
-            }
-
-            extractor.unselectTrack(trackIndex);
-            return startTime;
-        }
-        return -1;
-    }
-    
-
-    private int selectTrack(MediaExtractor extractor, boolean audio) {
-        int numTracks = extractor.getTrackCount();
-        for (int i = 0; i < numTracks; i++) {
-            MediaFormat format = extractor.getTrackFormat(i);
-            String mime = format.getString(MediaFormat.KEY_MIME);
-            if (audio) {
-                if (mime.startsWith("audio/")) {
-                    return i;
-                }
-            } else {
-                if (mime.startsWith("video/")) {
-                    return i;
-                }
-            }
-        }
-        return MEDIATYPE_NOT_AUDIO_VIDEO;
-    }
-
 
     /**
      * Configures encoder and muxer state, and prepares the input Surface.
